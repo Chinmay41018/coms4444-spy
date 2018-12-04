@@ -106,149 +106,167 @@ public class Player implements spy.sim.Player
 		}
 	}
 
-	public boolean checkLoc(Point soilder, Point us)
-	{
-		if(soilder.y>us.y)
-		{
-			return true;
-		}
-		else if (soilder.y==us.y)
-		{
-			if(soilder.x<us.x)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		else 
+    public boolean checkLoc(List<Integer> players, Point soilder, Point us)
+    {
+    	Integer player = players.get(0);
+		if(player>this.id)
 		{
 			return false;
 		}
+		else if (player==this.id)
+		{
+			return checkLoc(soilder,us);
+		}
+		else
+		{
+			return true;
+		}
 	}
 
-	public Point playerDetectedMove()
-	{
+    public boolean checkLoc(Point soilder, Point us)
+    {
+        if(soilder.y>us.y)
+        {
+        	return true;
+       	}
+        else if (soilder.y==us.y)
+        {
+            if(soilder.x < us.x)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else 
+        {
+            return false;
+        }
+    }
+
+    public Point playerDetectedMove()
+    {
 		Point ret = new Point(0,0);
-		if(stay)
-		{
-			stay = false;
-			ret = null;
-		}
-		else if (moveToPlayer)
-		{
-			ret = movePosition;
-		}
-		return ret;
-	}
+        if(stay)
+        {
+            stay = false;
+            ret = null;
+        }
+        else if (moveToPlayer)
+        {
+            ret = movePosition;
+        }
+        return ret;
+    }
 
 	// This is our observation, so we know this is factual.
-	// Like do I really need to check if Package mismatched? Or Condition?
-	public void observe(Point loc, HashMap<Point, CellStatus> statuses)
-	{
-		// Update current solider location
-		current = loc;
-		playerDetect = false;
-		stay = false;
-		moveToPlayer = false;
-		//System.out.println("Updaing loc");
-		for (Map.Entry<Point, CellStatus> entry : statuses.entrySet())
-		{
-			Point p = entry.getKey();
-			int flag = 1;
-			CellStatus status = entry.getValue();
-			List<Integer> players = status.getPresentSoldiers();
-			for(Integer player:players)
-			{
-				if(justMet.contains(player))
-				{
-					flag = 1;
-				}
-				else{
-					flag = 0;
-				}
-			}
+    // Like do I really need to check if Package mismatched? Or Condition?
+    public void observe(Point loc, HashMap<Point, CellStatus> statuses)
+    {
+    	System.out.println("YO");
+    	// Update current solider location
+        current = loc;
+        playerDetect = false;
+        stay = false;
+        moveToPlayer = false;
+        //System.out.println("Updaing loc");
+        for (Map.Entry<Point, CellStatus> entry : statuses.entrySet())
+        {
+            Point p = entry.getKey();
+            int flag = 1;
+            CellStatus status = entry.getValue();
+            List<Integer> players = status.getPresentSoldiers();
+            for(Integer player:players)
+            {
+                if(justMet.contains(player))
+                {
+                    flag = 1;
+                }
+                else
+                {
+                    flag = 0;
+                    break;
+                }
+            }
 
-			if((players != null)&&(flag==0))
-			{
-				if(((p.x==current.x)&&(p.y==current.y))
-						||(Math.abs(p.x-current.x)>1)||(Math.abs(p.y-current.y)>1))
-				{
-					
-				}
-				else
-				{
-					playerDetect = true;
-					if(checkLoc(p,loc))
-					{
-						stay = true;
-						moveToPlayer = false;
-						movePosition.x = p.x - current.x;
-						movePosition.y = p.y - current.y;
-					}
-					else
-					{
-						stay = false;
-						moveToPlayer = true;
-						movePosition.x = p.x - current.x;
-						movePosition.y = p.y - current.y;
-					}
-				}
-			}
+            if((players != null)&&(flag==0))
+            {
+                if(((p.x==current.x)&&(p.y==current.y))||(Math.abs(p.x-current.x)>1)||(Math.abs(p.y-current.y)>1))
+                {
+                	
+                }
+                else
+                {
+                    playerDetect = true;
+                    if(checkLoc(players,p,current))
+                    {
+                        stay = true;
+                        moveToPlayer = false;
+                        movePosition.x = p.x - current.x;
+                        movePosition.y = p.y - current.y;
+                    }
+                    else
+                    {
+                        stay = false;
+                        moveToPlayer = true;
+                        movePosition.x = p.x - current.x;
+                        movePosition.y = p.y - current.y;
+                    }
+                }
+            }
 
-			int condition = status.getC();
-			int type = status.getPT();
-			if(condition == 0)
-			{
-				//Not Mud!
-			}
-			else if(condition == 1)
-			{
-				//Mud!
-			}
-
-			// Package Found!
-			if(type == 1)
-			{
-				package_loc = p;
-				possible_package = null;
-			}
-			// Target found
-			else if(type == 2)
-			{
-				target_loc = p;
-				possible_target = null;
-			}
-			// 0 just means not special tile...
-
-			// Check our entry. Row: x, Column: y at our truth only table
-			Record record = truth_table.get(p.x).get(p.y);
-			if (record == null)
-			{
-				ArrayList<Observation> observations = new ArrayList<Observation>();
-				record = new Record(p, status.getC(), status.getPT(), observations);
-				truth_table.get(p.x).set(p.y, record);
-				Record record2 = new Record(p, status.getC(), status.getPT(), observations);
-				records.get(p.x).set(p.y, record2);
-			}
-			else
-			{
-				// In a truth table, only we add our oberservation ourselves? 
-				// As a spy we may need to start lying here?
-				if(isSpy)
-				{
-					record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));
-				}
-				else
-				{
-					record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));		
-				}
-			}
-		}
-	}
-
+            int condition = status.getC();
+            int type = status.getPT();
+            if(condition == 0)
+            {
+            	//Not Mud!
+            }
+            else if(condition == 1)
+            {
+            	//Mud!
+            }
+            
+            // Package Found!
+            if(type == 1)
+            {
+                package_loc = p;
+                possible_package = null;
+            }
+            // Target found
+            else if(type == 2)
+            {
+            	target_loc = p;
+            	possible_target = null;
+            }
+            // 0 just means not special tile...
+            
+            // Check our entry. Row: x, Column: y at our truth only table
+            Record record = truth_table.get(p.x).get(p.y);
+            if (record == null)
+            {
+                ArrayList<Observation> observations = new ArrayList<Observation>();
+                record = new Record(p, status.getC(), status.getPT(), observations);
+                truth_table.get(p.x).set(p.y, record);
+                Record record2 = new Record(p, status.getC(), status.getPT(), observations);
+                records.get(p.x).set(p.y, record2);
+            }
+            else
+            {
+            	// In a truth table, only we add our oberservation ourselves? 
+            	// As a spy we may need to start lying here?
+            	if(isSpy)
+            	{
+            		record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));
+            	}
+            	else
+            	{
+            		record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));		
+            	}
+            }
+        }
+    }
 	private boolean liar_found()
 	{
 		// Comare our truth map with our record table...
@@ -398,7 +416,8 @@ public class Player implements spy.sim.Player
 	{
 		proposing_rounds++;
 
-		if(target_loc == null || package_loc == null){
+		if(target_loc == null || package_loc == null)
+		{
 			return null;
 		}
 		/*	if (proposing_rounds > 6){
@@ -421,7 +440,8 @@ public class Player implements spy.sim.Player
 
 
 		// give wrong direction somehow...
-		if(isSpy){
+		if(isSpy)
+		{
 			return solution.path;
 		}
 		else
@@ -584,7 +604,6 @@ public class Player implements spy.sim.Player
 			return bla;
 		}
 
-
 		// You have a pre-determined path from BFS
 		// Just find your next move step!
 		if(!go_to.isEmpty())
@@ -595,7 +614,6 @@ public class Player implements spy.sim.Player
 		}
 
 		ArrayList<Point> moves = all_valid_moves(current);
-
 		int x = 0;
 		int y = 0;
 
@@ -737,8 +755,6 @@ public class Player implements spy.sim.Player
 			helpme.bushwhack();
 			go_to = helpme.path;
 			}*/
-
-
 		return new Point(0,0);
 	}
 
