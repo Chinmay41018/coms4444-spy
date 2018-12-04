@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
 
 import spy.sim.Point;
 import spy.sim.Record;
@@ -21,10 +22,17 @@ public class Player implements spy.sim.Player
 	// There is no point to use Record because I don't care what other players say!
 	private ArrayList<ArrayList<Record>> truth_table;
 
-	// This Matrix has a <= 100% Turthful map because
-	// we can't trust others records of the map.
+	// Build a Records Table for each individual Player
+	// We can then use Set Theory as suggested by Bohan to find the spy!
+	// Or find who has been tricked by the spy!
+	// Truth table technically is in here as well.
+	//private HashMap<Integer, ArrayList<ArrayList<Record>> records>;	
 	private ArrayList<ArrayList<Record>> records;
+	
+	private valid validate;// Use a new class to seperate validation methods
+	
 	public boolean playerDetect;
+	
 	// Parse Init
 	private int id;
 	public ArrayList<Integer> justMet = new ArrayList<Integer>();
@@ -36,10 +44,15 @@ public class Player implements spy.sim.Player
 	private final static int SIZE = 100;
 	private int n_players;
 	public boolean stay;
+	
 	// Spy functions
 	private int SPY_ID = -1;
 	public Point movePosition;
 	public boolean moveToPlayer;
+	
+	// Anyone accused of spy (includes buggy players, go in this black list!
+	private ArrayList<Integer> spies = new ArrayList<Integer>();
+	
 	// Keep Location of Target and Package
 	private Point target_loc;
 	private Point package_loc;
@@ -104,6 +117,7 @@ public class Player implements spy.sim.Player
 			truth_table.get(p.x).set(p.y, new Record(p, 2, 0, observations));
 			records.get(p.x).set(p.y, new Record(p, 2, 0, observations));
 		}
+		validate = new valid(truth_table);
 	}
 
     public boolean checkLoc(List<Integer> players, Point soilder, Point us)
@@ -165,7 +179,6 @@ public class Player implements spy.sim.Player
     // Like do I really need to check if Package mismatched? Or Condition?
     public void observe(Point loc, HashMap<Point, CellStatus> statuses)
     {
-    	System.out.println("YO");
     	// Update current solider location
         current = loc;
         playerDetect = false;
@@ -265,49 +278,11 @@ public class Player implements spy.sim.Player
             		record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));		
             	}
             }
+            // Update Validate
+            validate.update_truth(truth_table);
         }
     }
-	private boolean liar_found()
-	{
-		// Comare our truth map with our record table...
-		for(int row = 0; row < SIZE; row++)
-		{
-			List<Record> truth_row = truth_table.get(row);
-			List<Record> current_row = records.get(row);
-			for (int col = 0; col < SIZE; col++)
-			{
-				Record truth = truth_row.get(col);
-				Record challenge = current_row.get(col);
-				if(truth == null)
-				{
-					// Well fuck and unknown unknown?
-					// We can put this as unverifiable?
-					if(challenge != null)
-					{
-						continue;
-					}
-				}
-				// Nothing to test the lie against, so eh w/e
-				if(challenge == null)
-				{
-					continue;
-				}
-				// Somone lied about the Mud/Not Mud! The horror!
-				if(truth.getC() != challenge.getC())
-				{
-					return false;
-				}
-				// Someone lied about package/target location! Oh the humanity!
-				// If there is a bug, we can check if it is swapped by someone?
-				if(truth.getPT() != challenge.getPT())
-				{
-					return false; 
-				}
-			}
-		}
-		return true;
-	}
-
+	
 	public List<Record> sendRecords(int id)
 	{
 		justMet.add(id);
@@ -347,10 +322,11 @@ public class Player implements spy.sim.Player
 		{
 			return;
 		}
-		if(id == SPY_ID)
+		// All spies are ignored
+		// Note a buggy player is a spy in terms of function
+		if(spies.contains(id))
 		{
-			// Yeah fuck this I am not trusting a spy...
-			// But should I listen to one and keep the data?
+			return;
 		}
 		else
 		{
@@ -362,22 +338,21 @@ public class Player implements spy.sim.Player
 
 				if(is_lying(r) == 1)
 				{
-					// BLOCK EVERYTHING!
-					// SPY IS FOUND!
-					SPY_ID = id;
+					spies.add(id);
 				}
 
-				if(truth_table.get(p.x).get(p.y) == null){
-
+				if(truth_table.get(p.x).get(p.y) == null)
+				{
 					this.records.get(p.x).set(p.y, r);
-					if(r.getPT() == 1 && package_loc == null){
+					if(r.getPT() == 1 && package_loc == null)
+					{
 						possible_package = p;
 					}
-					if(r.getPT() == 2 && target_loc == null){
+					if(r.getPT() == 2 && target_loc == null)
+					{
 						possible_target = p;
 					}
 				}
-
 			}
 
 			// Append to current observations? 
@@ -415,7 +390,6 @@ public class Player implements spy.sim.Player
 	public List<Point> proposePath()
 	{
 		proposing_rounds++;
-
 		if(target_loc == null || package_loc == null)
 		{
 			return null;
@@ -440,12 +414,15 @@ public class Player implements spy.sim.Player
 
 
 		// give wrong direction somehow...
+
 		if(isSpy)
 		{
 			return solution.path;
 		}
 		else
 		{
+			// IMPORTANT FOR REPORT TO SEE IF WE CATCH THE SPY
+			System.out.println("G5 accuses the following as spies: " + Arrays.toString(spies.toArray()));
 			return solution.path;
 		}
 	}
@@ -470,7 +447,7 @@ public class Player implements spy.sim.Player
 			{
 				// Analyze the Path. For now, just compare with our truth table. 
 				// If a lie is found, Do NOT vote. Otherwise, vote for it!
-				if(is_valid_path(proposed_path))
+				if(validate.is_valid_path(proposed_path))
 				{
 					if(vote_for.size() == 0)
 					{
@@ -481,9 +458,8 @@ public class Player implements spy.sim.Player
 
 				else
 				{
+					spies.add(i);
 					valid_paths.add(proposed_path);
-					// Who else but the spy would give me a bad path?
-					SPY_ID = i;
 				}
 			}
 		}
@@ -510,53 +486,6 @@ public class Player implements spy.sim.Player
 		return vote_for;
 	}
 
-	private boolean is_valid_path(List<Point> path)
-	{
-		// Obviously empty path is bad!
-		if(path.isEmpty())
-		{
-			return false;
-		}
-
-		for (int i = 0; i < path.size(); i++)
-		{
-			Point test = path.get(i);
-			Record verify = truth_table.get(test.x).get(test.y);
-			if(verify == null)
-			{
-				// Sadly you can only just continue...
-				return false;
-			}
-
-			if (i == 0)
-			{
-				// Not Location of Package!
-				if(verify.getPT() != 1)
-				{
-					return false;
-				}
-			}
-			else if(i == path.size() - 1)
-			{
-				// Not Location of Target!
-				if(verify.getPT() != 2)
-				{
-					return false;
-				}
-			}
-
-			// Are any of these tiles muddy?
-			// Conidtion 1 -> Muddy and 2 -> Water!
-			if(verify.getC() != 0)
-			{
-				return false;
-			}
-		}
-		// Well the path looks good according to the truth table
-		return true;
-	}
-
-
 	// Recieves the results (in the event that no path succeeds).
 	public void receiveResults(HashMap<Integer, Integer> results)
 	{
@@ -572,7 +501,7 @@ public class Player implements spy.sim.Player
 			Integer num_votes = results.get(i);
 			if(num_votes != null)
 			{
-				//		System.out.println("G"+i+ " got " + num_votes + " votes");
+				//System.out.println("G"+i+ " got " + num_votes + " votes");
 			}
 		}
 	}
@@ -613,14 +542,12 @@ public class Player implements spy.sim.Player
 			return new Point(next_step.x - current.x, next_step.y - current.y);
 		}
 
-		ArrayList<Point> moves = all_valid_moves(current);
 		int x = 0;
 		int y = 0;
 
 		if(target_loc != null && package_loc != null)
 		{
 			MazeSolver moveToPackage = new MazeSolver(current, package_loc, truth_table);
-			//		    System.out.printf("trying to move to %d, %d from %d, %d if we have a final path", package_loc.x, package_loc.y, current.x, current.y);
 			moveToPackage.bushwhack();
 
 			MazeSolver finalPath = new MazeSolver(package_loc, target_loc, truth_table);
@@ -629,10 +556,8 @@ public class Player implements spy.sim.Player
 			if(moveToPackage.path != null && finalPath != null)
 			{
 				go_to = moveToPackage.path;
-				//	System.out.println("set path to package");
 				return new Point(0, 0);
 			}
-			//System.out.println("no package path found\n");
 		}
 
 		/*    if(target_loc == null && possible_target != null){
@@ -756,62 +681,5 @@ public class Player implements spy.sim.Player
 			go_to = helpme.path;
 			}*/
 		return new Point(0,0);
-	}
-
-	private ArrayList<Point> all_valid_moves(Point current)
-	{
-		ArrayList<Point> valid = new ArrayList<Point>();
-		/*
-		 * All moves are: X is current
-		 * (-1,  1) , (0, 1)	, (1, 1)
-		 * (-1,  0) , X			, (1, 0)
-		 * (-1, -1) , (0. -1)	, (1, -1)
-		 * 
-		 * The for loops should force the absolute value constraint easily.
-		 */
-
-		for (int x = -1; x < 2; x++)
-		{
-			for(int y = -1; y < 2; y++)
-			{
-				if(valid_step(current, x, y))
-				{
-					valid.add(new Point(x, y));
-				}
-			}
-		}
-		// Probably should remove the point 0, 0?
-		valid.remove(new Point(0, 0));
-		return valid;
-	}
-
-	private boolean valid_step(Point loc, int x, int y)
-	{
-		if (loc.x + x <= SIZE - 1 && loc.x + x >= 0 && loc.y + y <= SIZE - 1 && loc.y + y >= 0)
-		{
-			// Check if in water using the truth_table
-			Record r = truth_table.get(loc.x + x).get(loc.y + y);
-			// Can't be water here since no entry exists!
-			if(r == null)
-			{
-				return true;
-			}
-			else
-			{
-				// It is a water tile! Not Valid!
-				if(r.getC() == 2)
-				{
-					return false;
-				}
-				else
-				{
-					return true;
-				}
-			}
-		}
-		else
-		{
-			return false;
-		}
 	}
 }
