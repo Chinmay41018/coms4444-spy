@@ -26,11 +26,10 @@ public class MazeSolver
 	public List<Point> sweep(Point s, ArrayList<ArrayList<Record>> map) 
 	{
 		List<List<Point>> prev = new ArrayList<List<Point>>();
-		for(int i=0; i<100; i++)
+		for(int i = 0; i < SIZE; i++)
 		{
-
-			List row = new ArrayList<Point>();
-			for (int j=0; j<100; j++)
+			List<Point> row = new ArrayList<Point>();
+			for (int j = 0; j < SIZE; j++)
 			{
 				row.add(null);
 			}
@@ -95,7 +94,7 @@ public class MazeSolver
 		for(int i=0; i<100; i++)
 		{
 
-			List row = new ArrayList<Point>();
+			List<Point> row = new ArrayList<Point>();
 			for (int j=0; j<100; j++)
 			{
 				row.add(null);
@@ -167,11 +166,11 @@ public class MazeSolver
 		offsets.add(Arrays.asList(-1,1));
 		offsets.add(Arrays.asList(-1,-1));
 
-		for(int i=0; i<100; i++)
+		for(int i=0; i < SIZE; i++)
 		{
 
-			List row = new ArrayList<Point>();
-			for (int j=0; j<100; j++)
+			List<Point> row = new ArrayList<Point>();
+			for (int j = 0; j < SIZE; j++)
 			{
 				row.add(null);
 			}

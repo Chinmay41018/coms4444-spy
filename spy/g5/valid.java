@@ -30,6 +30,7 @@ public class valid
 	{
 		
 	}
+	
 	public valid(ArrayList<ArrayList<Record>> truth)
 	{
 		this.truth_table = truth;

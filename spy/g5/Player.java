@@ -414,7 +414,6 @@ public class Player implements spy.sim.Player
 
 
 		// give wrong direction somehow...
-
 		if(isSpy)
 		{
 			return solution.path;
@@ -422,7 +421,7 @@ public class Player implements spy.sim.Player
 		else
 		{
 			// IMPORTANT FOR REPORT TO SEE IF WE CATCH THE SPY
-			System.out.println("G5 accuses the following as spies: " + Arrays.toString(spies.toArray()));
+			System.out.println(this.id + " G5 accuses the following as spies: " + Arrays.toString(spies.toArray()));
 			return solution.path;
 		}
 	}
@@ -522,7 +521,7 @@ public class Player implements spy.sim.Player
 			}
 			else
 			{
-				meetTime.set(i,a);
+				meetTime.set(i, a);
 			}
 		}
 
