@@ -41,6 +41,20 @@ public class valid
 		this.truth_table = truth;
 	}
 	
+	public double path_uncertainty(List<Point> path)
+	{
+		int unknown_point = 0;
+		for (Point p: path)
+		{
+			Record r = truth_table.get(p.x).get(p.y);
+			if(r == null)
+			{
+				++unknown_point;
+			}
+		}
+		return (double) unknown_point/path.size();
+	}
+	
 	// Vaibhav patch: Is each step valid?
 	public boolean is_valid_path(List<Point> path)
 	{
@@ -59,7 +73,7 @@ public class valid
 				// TODO: Continue, check regardless?
 				// Or check the step!
 				//return false;
-				continue;
+				return false;
 			}
 			
 			if (i == 0)
@@ -187,6 +201,40 @@ public class valid
 		{
 			e.printStackTrace();
 		}
+	}
+	
+	public boolean find_contradiction(ArrayList<ArrayList<Record>> other_group)
+	{
+		for(int r = 0; r < SIZE; r++)
+		{
+			ArrayList<Record> row = other_group.get(r);
+			for(Record rec : row)
+			{
+				Point p;
+				if (rec != null)
+				{
+					p = rec.getLoc();
+					Record check = truth_table.get(p.x).get(p.y);
+					// A match exists! Compare them!
+					if(check != null)
+					{
+						// Lied about Condition of Tile
+						if (check.getC() != rec.getC())
+						{
+							return false;
+						}
+					    
+						// Lied about Package/Target Location
+					    if (check.getPT() != rec.getPT())
+					    {
+					        return false;
+					    }
+					    // Check if lied something related to time??
+					}	
+				}
+			}
+		}
+		return true;
 	}
 	
 //===================================METHODS BELOW WORK BUT ARE NOT USED==================================================================	

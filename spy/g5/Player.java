@@ -26,8 +26,8 @@ public class Player implements spy.sim.Player
 	// We can then use Set Theory as suggested by Bohan to find the spy!
 	// Or find who has been tricked by the spy!
 	// Truth table technically is in here as well.
-	//private HashMap<Integer, ArrayList<ArrayList<Record>> records>;	
-	private ArrayList<ArrayList<Record>> records;
+	private HashMap<Integer, ArrayList<ArrayList<Record>>> records = new HashMap<Integer, ArrayList<ArrayList<Record>>>();	
+	//private ArrayList<ArrayList<Record>> records;
 	
 	private valid validate;// Use a new class to seperate validation methods
 	
@@ -85,39 +85,35 @@ public class Player implements spy.sim.Player
 		this.isSpy = isSpy;
 		movePosition = new Point(0,0);
 		moveToPlayer = false;
+		
 		// Initialize Maps
-		this.records = new ArrayList<ArrayList<Record>>();
-		this.truth_table = new ArrayList<ArrayList<Record>>();
-
-		for (int i = 0; i < SIZE; i++)
+		for (int k = 0; k < n; k++)
 		{
-			ArrayList<Record> row = new ArrayList<Record>();
-			ArrayList<Record> true_row = new ArrayList<Record>();
-			for (int j = 0; j < SIZE; j++)
+			ArrayList<ArrayList<Record>> record = new ArrayList<ArrayList<Record>>();
+			for (int i = 0; i < SIZE; i++)
 			{
-				row.add(null);
-				true_row.add(null);
+				ArrayList<Record> row = new ArrayList<Record>();
+				for (int j = 0; j < SIZE; j++)
+				{
+					row.add(null);
+				}
+				record.add(row);
 			}
-			this.records.add(row);
-			this.truth_table.add(true_row);
+			records.put(k, record); 
 		}
+		
+		truth_table = records.get(this.id);
 
 		// It is critical for truth_table to know water tiles
 		// to catch spies saying a water tile is a mud/clear tile!
 		for (int i = 0; i < waterCells.size(); i++)
 		{
 			Point p = waterCells.get(i);
-			// Technically speaking everyone knows at t = 0 water.
-			ArrayList<Observation> observations = new ArrayList<Observation>();
-			for(int j = 0; j < n; j++)
-			{
-				observations.add(new Observation(i, 0));
-			}
 			// c = 2 is water, pt = 0, regular
-			truth_table.get(p.x).set(p.y, new Record(p, 2, 0, observations));
-			records.get(p.x).set(p.y, new Record(p, 2, 0, observations));
+			truth_table.get(p.x).set(p.y, new Record(p, 2, 0, new ArrayList<Observation>()));
 		}
 		validate = new valid(truth_table);
+		records.put(this.id, truth_table);
 	}
 
     public boolean checkLoc(List<Integer> players, Point soilder, Point us)
@@ -139,11 +135,11 @@ public class Player implements spy.sim.Player
 
     public boolean checkLoc(Point soilder, Point us)
     {
-        if(soilder.y>us.y)
+        if(soilder.y > us.y)
         {
         	return true;
        	}
-        else if (soilder.y==us.y)
+        else if (soilder.y == us.y)
         {
             if(soilder.x < us.x)
             {
@@ -262,8 +258,10 @@ public class Player implements spy.sim.Player
                 ArrayList<Observation> observations = new ArrayList<Observation>();
                 record = new Record(p, status.getC(), status.getPT(), observations);
                 truth_table.get(p.x).set(p.y, record);
+                /*
                 Record record2 = new Record(p, status.getC(), status.getPT(), observations);
                 records.get(p.x).set(p.y, record2);
+                */
             }
             else
             {
@@ -278,8 +276,9 @@ public class Player implements spy.sim.Player
             		record.getObservations().add(new Observation(this.id, Simulator.getElapsedT()));		
             	}
             }
-            // Update Validate
+            // Update Validate and Records
             validate.update_truth(truth_table);
+            records.put(this.id, truth_table);
         }
     }
 	
@@ -333,24 +332,31 @@ public class Player implements spy.sim.Player
 			for(int i = 0; i < recs.size(); i++)
 			{
 				Record r = recs.get(i);
-				Point p = r.getLoc();
-				r.getObservations().add(new Observation (this.id, Simulator.getElapsedT()));
-
 				if(is_lying(r) == 1)
 				{
 					spies.add(id);
+					return;
 				}
-
-				if(truth_table.get(p.x).get(p.y) == null)
+				else
 				{
-					this.records.get(p.x).set(p.y, r);
-					if(r.getPT() == 1 && package_loc == null)
+					Point p = r.getLoc();
+					r.getObservations().add(new Observation (this.id, Simulator.getElapsedT()));
+					
+					// Add this record to its matchin group!
+					// Update regradless if null or not
+					ArrayList<ArrayList<Record>> record = records.get(id);
+					record.get(p.x).set(p.y, new Record(r));
+					
+					if(truth_table.get(p.x).get(p.y) == null)
 					{
-						possible_package = p;
-					}
-					if(r.getPT() == 2 && target_loc == null)
-					{
-						possible_target = p;
+						if(r.getPT() == 1 && package_loc == null)
+						{
+							possible_package = p;
+						}
+						if(r.getPT() == 2 && target_loc == null)
+						{
+							possible_target = p;
+						}
 					}
 				}
 			}
@@ -400,6 +406,73 @@ public class Player implements spy.sim.Player
 	    go_to = explore.path;
 	    proposing_rounds = 0;
 	    }	*/
+		
+		// Use other people's data as well!
+		ArrayList<ArrayList<Record>> grand_table = new ArrayList<ArrayList<Record>>();
+		for (int i = 0; i < SIZE; i++)
+		{
+			ArrayList<Record> row = new ArrayList<Record>();
+			for (int j = 0; j < SIZE; j++)
+			{
+				row.add(null);
+			}
+			grand_table.add(row);
+		}
+		
+		// Start with appending all stuff from truth table!
+		for (int i = 0; i < SIZE;i++)
+		{
+			ArrayList<Record> row = truth_table.get(i);
+			for(Record r : row)
+			{
+				if(r != null)
+				{
+					Point p = r.getLoc();
+					grand_table.get(p.x).set(p.y, new Record(r));	
+				}
+			}
+		}
+		
+		for(int i = 0; i < n_players;i++)
+		{
+			// No need to check Truth table?
+			if(i == this.id)
+			{
+				continue;
+			}
+			
+			// Ignore spy data
+			if(spies.contains(i))
+			{
+				continue;
+			}
+			else
+			{
+				ArrayList<ArrayList<Record>> g_table = records.get(i);			
+				// Do a Pairwise comparison with our truth table
+				if(validate.find_contradiction(g_table))
+				{
+					spies.add(i);
+				}
+				else
+				{				
+					// If it passes put everything in record to grand table! 
+					for(int a = 0; a < SIZE; a++)
+					{
+						ArrayList<Record> row = g_table.get(a);
+						for(int b = 0; b < SIZE; b++)
+						{
+							Record rec = row.get(b);
+							grand_table.get(a).set(b, new Record(rec));
+						}
+					}
+				}
+			}
+		}
+		
+		MazeSolver total = new MazeSolver(package_loc, target_loc, grand_table);
+		total.solve();
+		
 		MazeSolver solution = new MazeSolver(package_loc, target_loc, truth_table);
 		solution.solve();
 		//	System.out.print("proposing path: ");
@@ -412,10 +485,11 @@ public class Player implements spy.sim.Player
 			// System.out.println();
 		}
 
-
 		// give wrong direction somehow...
 		if(isSpy)
 		{
+			// Try this...
+			solution.path.add(new Point(0, 0));
 			return solution.path;
 		}
 		else

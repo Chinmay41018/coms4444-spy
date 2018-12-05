@@ -168,7 +168,6 @@ public class MazeSolver
 
 		for(int i=0; i < SIZE; i++)
 		{
-
 			List<Point> row = new ArrayList<Point>();
 			for (int j = 0; j < SIZE; j++)
 			{
