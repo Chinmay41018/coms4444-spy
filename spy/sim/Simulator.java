@@ -99,29 +99,14 @@ public class Simulator {
     private static List<Point> finalPath;
     private static boolean victory;
 
-    private static int spyID = -1;
-    private static boolean noSpy = false;
+    private static int spyID;
     
     public static void main(String[] args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IOException {
         parseArgs(args);
-        num_players = playerNames.size();
-        ArrayList<Integer> shuffle = new ArrayList<Integer>();
-        for (int i = 0; i < num_players; i++)
-        {
-            shuffle.add(i);
-        }
-        Collections.shuffle(shuffle);
-
-        ArrayList<String> playerNamesClone = new ArrayList<String>(playerNames);
-        for (int i = 0; i < num_players; i++)
-        {
-            playerNames.set(i, playerNamesClone.get(shuffle.get(i)));
-        }
-
+        Collections.shuffle(playerNames);
         for (int i = 0; i < playerNames.size(); i++)
         {
             System.out.println("Player " + i + ": " + playerNames.get(i));
-            Log.record("Player " + i + ": " + playerNames.get(i));
         }
         
         if (seed == -1)
@@ -132,18 +117,9 @@ public class Simulator {
             rand = new Random(seed);
         }
         
-        if (noSpy == false) {
-            if (spyID == -1) {
-                spyID = rand.nextInt(num_players);
-            }
-            spyID = shuffle.get(spyID);
-            System.out.println("Player " + spyID + " is spy");
-            Log.record("Player " + spyID + " is spy");
-        } else
-        {
-            Log.record("NO SPY!");
-            spyID = -1;
-        }
+        num_players = playerNames.size();
+        spyID = rand.nextInt(num_players);
+        System.out.println("Player " + spyID + " is spy");
         
         observableOffsets = new ArrayList<Point>();
         observableOffsets.add(new Point(0, -3));
@@ -270,27 +246,20 @@ public class Simulator {
         
         if (victory)
         {
-            System.out.println("\nEND: SUCCESS! Score: " + elapsedT);
-            Log.record("\nEND: SUCCESS! Score: " + elapsedT);
+            System.out.println("\nSuccess!!");
         }
         else if (elapsedT >= t)
         {
-            System.out.println("\nEND: RAN OUT OF TIME! Score: " + t);
-            Log.record("\nEND: RAN OUT OF TIME! Score: " + t);
+            System.out.println("\nTime's up!");
         }
         else
         {
-            System.out.println("\nEND: INVALID PATH! Score: " + 2 * t);
-            Log.record("\nEND: INVALID PATH! Score: " + 2 * t);
+            System.out.println("\nUh-oh. Not a valid path.");
         }
 
         if (gui)
         {
-            gui(server, state(fps));
-            while (true)
-            {
-
-            }
+            gui(server, state(-1));
         }
     }
     
@@ -351,8 +320,6 @@ public class Simulator {
                 if (!player1Loc.equals(player2Loc)) continue;
                 
                 List<Record> records = players.get(i).sendRecords(j);
-                if (records == null) records = new ArrayList<Record>();
-                
                 ArrayList<Record> copy = new ArrayList<Record>();
                 for (Record r : records)
                 {
@@ -489,9 +456,15 @@ public class Simulator {
             }
             totalTime += moveTime(from, to) * 5;
         }
-
-        elapsedT += totalTime;
-        return 1;
+        if (elapsedT + totalTime > t)
+        {
+            return 2;
+        }
+        else
+        {
+            elapsedT += totalTime;
+            return 1;
+        }
     }
     
     private static boolean pointsAreAdjacent(Point p1, Point p2)
@@ -746,14 +719,6 @@ public class Simulator {
                             throw new IllegalArgumentException("Missing random seed.");
                         }
                         seed = Integer.parseInt(args[i]);
-                    } else if (args[i].equals("--spy")) {
-                        if (++i == args.length) {
-                            throw new IllegalArgumentException("Missing random seed.");
-                        }
-                        spyID = Integer.parseInt(args[i]);
-                    }
-                    else if (args[i].equals("--nospy")) {
-                        noSpy = true;
                     } else {
                         throw new IllegalArgumentException("Unknown argument '" + args[i] + "'");
                     }

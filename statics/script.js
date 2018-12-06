@@ -66,7 +66,7 @@ function drawPlayers(ctx, players)
         }
         else
         {
-            ctx.fillStyle=colors[i % 9];
+            ctx.fillStyle=colors[i];
         }
         
         ctx.beginPath();

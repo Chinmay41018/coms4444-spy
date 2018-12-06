@@ -818,7 +818,7 @@ public class Player implements spy.sim.Player {
             // ### EXPLORE RANDOMLY ###
             if (stayPutCounts == 0) {
 
-                int maxUnobserved = Integer.MIN_VALUE;
+                double maxUnobserved = Double.NEGATIVE_INFINITY;
                 String dirUnobserved = "";
                 System.out.println("there was a loop = " + isLoop(last12ObsLocs));
 
@@ -833,7 +833,6 @@ public class Player implements spy.sim.Player {
                     
                     double maxHVal = Double.NEGATIVE_INFINITY;
                     String maxDir = "";
-                    ArrayList<String> maxDirs = new ArrayList<String>();
 
                     /*// First try to find move: if there is a possible move to a cell that is unvisited then move to it
                     // Alternatively, add up all unvisited cells for all directions you can move in and move in direction of most unvisited cells
@@ -848,7 +847,7 @@ public class Player implements spy.sim.Player {
                     for (String dir : possibleMoves.keySet()) {
 
                         Point newPoint = new Point(this.loc.x + possibleMoves.get(dir).x, this.loc.y + possibleMoves.get(dir).y);
-                        int num_unobserved = 0;
+                        double num_unobserved = 0;
 
                         for (String d : observableOffsets.keySet()) {
                             for (Point dirPoint : observableOffsets.get(d)) {
