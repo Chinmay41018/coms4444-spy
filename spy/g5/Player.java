@@ -27,7 +27,7 @@ public class Player implements spy.sim.Player
 	// Or find who has been tricked by the spy!
 	// Truth table technically is in here as well.
 	private HashMap<Integer, ArrayList<ArrayList<Record>>> records = new HashMap<Integer, ArrayList<ArrayList<Record>>>();	
-	//private ArrayList<ArrayList<Record>> records;
+	private ArrayList<ArrayList<Record>> explore_map;
 	
 	private valid validate;// Use a new class to seperate validation methods
 	
@@ -49,6 +49,7 @@ public class Player implements spy.sim.Player
 	private int SPY_ID = -1;
 	public Point movePosition;
 	public boolean moveToPlayer;
+    private boolean movingLeft;
 	
 	// Anyone accused of spy (includes buggy players, go in this black list!
 	private ArrayList<Integer> spies = new ArrayList<Integer>();
@@ -77,6 +78,7 @@ public class Player implements spy.sim.Player
 		this.waterCells = waterCells; //Water, Can't pass them 
 		this.voting_rounds = 0;
 		this.stuck_for = 0;
+		this.movingLeft = false;
 		stay = false;
 		if(isSpy)
 		{
@@ -101,7 +103,19 @@ public class Player implements spy.sim.Player
 			}
 			records.put(k, record); 
 		}
-		
+
+	        this.explore_map = new ArrayList<ArrayList<Record>>();
+		for (int i = 0; i < SIZE; i++)
+		    {
+			ArrayList<Record> row = new ArrayList<Record>();
+			for (int j = 0; j < SIZE; j++)
+			    {
+				row.add(null);
+			    }
+			explore_map.add(row);
+		    }
+
+
 		truth_table = records.get(this.id);
 
 		// It is critical for truth_table to know water tiles
@@ -111,9 +125,11 @@ public class Player implements spy.sim.Player
 			Point p = waterCells.get(i);
 			// c = 2 is water, pt = 0, regular
 			truth_table.get(p.x).set(p.y, new Record(p, 2, 0, new ArrayList<Observation>()));
+			explore_map.get(p.x).set(p.y, new Record(p, 2, 0, new ArrayList<Observation>()));
 		}
-		validate = new valid(truth_table);
-		records.put(this.id, truth_table);
+		
+		validate = new valid(truth_table); //validate is now a pointer to truth_table, is this intended?
+	        // i dont think we need this?? records.put(this.id, truth_table);
 	}
 
     public boolean checkLoc(List<Integer> players, Point soilder, Point us)
@@ -258,10 +274,9 @@ public class Player implements spy.sim.Player
                 ArrayList<Observation> observations = new ArrayList<Observation>();
                 record = new Record(p, status.getC(), status.getPT(), observations);
                 truth_table.get(p.x).set(p.y, record);
-                /*
                 Record record2 = new Record(p, status.getC(), status.getPT(), observations);
-                records.get(p.x).set(p.y, record2);
-                */
+                explore_map.get(p.x).set(p.y, record2);
+                
             }
             else
             {
@@ -277,8 +292,8 @@ public class Player implements spy.sim.Player
             	}
             }
             // Update Validate and Records
-            validate.update_truth(truth_table);
-            records.put(this.id, truth_table);
+            // since validate is carrying a pointer, I dont think we need this either? validate.update_truth(truth_table);
+            // ^^^ records.put(this.id, truth_table);
         }
     }
 	
@@ -332,10 +347,16 @@ public class Player implements spy.sim.Player
 			for(int i = 0; i < recs.size(); i++)
 			{
 				Record r = recs.get(i);
-				if(is_lying(r) == 1)
-				{
-					spies.add(id);
-					return;
+				if(is_lying(r) == 1){
+				    if (r.getObservations().size() == 1) //dont want to accuse people as spies for passing on info people told them
+					{
+					    System.out.println("recieved bad records");
+					    spies.add(id);
+					    return;
+					}
+				    else{
+					continue;
+				    }
 				}
 				else
 				{
@@ -344,7 +365,7 @@ public class Player implements spy.sim.Player
 					
 					// Add this record to its matchin group!
 					// Update regradless if null or not
-					ArrayList<ArrayList<Record>> record = records.get(id);
+					ArrayList<ArrayList<Record>> record = records.get(r.getObservations().get(0).getID());
 					record.get(p.x).set(p.y, new Record(r));
 					
 					if(truth_table.get(p.x).get(p.y) == null)
@@ -400,12 +421,12 @@ public class Player implements spy.sim.Player
 		{
 			return null;
 		}
-		/*	if (proposing_rounds > 6){
-	    MazeSolver explore = new MazeSolver(current, target_loc, truth_table);
-	    explore.bushwhack();
-	    go_to = explore.path;
-	    proposing_rounds = 0;
-	    }	*/
+		if (proposing_rounds > 6){
+		    MazeSolver explore = new MazeSolver(current, target_loc, truth_table);
+		    explore.bushwhack();
+		    go_to = explore.path;
+		    proposing_rounds = 0;
+	    }	
 		
 		// Use other people's data as well!
 		ArrayList<ArrayList<Record>> grand_table = new ArrayList<ArrayList<Record>>();
@@ -449,10 +470,12 @@ public class Player implements spy.sim.Player
 			else
 			{
 				ArrayList<ArrayList<Record>> g_table = records.get(i);			
-				// Do a Pairwise comparison with our truth table
-				if(validate.find_contradiction(g_table))
+				// Do a Pairwise comparison with our truth table THIS CAN ACCUSE VALID PLAYERS OF BEING SPIES IF THE SPY LIES ABOUT HISTORY WITH THEM AS THE DISCOVERER
+			/*	if(validate.find_contradiction(g_table))
 				{
-					spies.add(i);
+				    System.out.println("found lie in players table");
+				    System.out.println(i);
+				    //spies.add(i);
 				}
 				else
 				{				
@@ -466,15 +489,18 @@ public class Player implements spy.sim.Player
 							grand_table.get(a).set(b, new Record(rec));
 						}
 					}
-				}
+				 } */
+					
 			}
 		}
+
 		
 		MazeSolver total = new MazeSolver(package_loc, target_loc, grand_table);
 		total.solve();
 		
 		MazeSolver solution = new MazeSolver(package_loc, target_loc, truth_table);
 		solution.solve();
+		
 		//	System.out.print("proposing path: ");
 		if(solution.path != null)
 		{
@@ -486,17 +512,18 @@ public class Player implements spy.sim.Player
 		}
 
 		// give wrong direction somehow...
-		if(isSpy)
+		if(isSpy && solution.path != null)
 		{
 			// Try this...
-			solution.path.add(new Point(0, 0));
+		    solution.path.add(solution.path.get(solution.path.size() - 2));
 			return solution.path;
 		}
 		else
 		{
 			// IMPORTANT FOR REPORT TO SEE IF WE CATCH THE SPY
-			System.out.println(this.id + " G5 accuses the following as spies: " + Arrays.toString(spies.toArray()));
+			//System.out.println(this.id + " G5 accuses the following as spies: " + Arrays.toString(spies.toArray()));
 			return solution.path;
+			
 		}
 	}
 
@@ -509,6 +536,8 @@ public class Player implements spy.sim.Player
 		List<List<Point>> valid_paths = new ArrayList<List<Point>>();
 		List<Integer> valid_players = new ArrayList<Integer>();
 
+		HashMap<Integer, Integer> sizes = new HashMap<Integer, Integer>();
+		
 		for(int i = 0; i < n_players;i++)
 		{
 			List<Point> proposed_path = paths.get(i);
@@ -520,20 +549,19 @@ public class Player implements spy.sim.Player
 			{
 				// Analyze the Path. For now, just compare with our truth table. 
 				// If a lie is found, Do NOT vote. Otherwise, vote for it!
-				if(validate.is_valid_path(proposed_path))
+				if(validate.is_valid_path(proposed_path) != 0)
 				{
-					if(vote_for.size() == 0)
-					{
-						vote_for.add(i);
-					}
-					//valid_players.add(i);
+				    sizes.put(i, proposed_path.size());
 				}
 
 				else
-				{
+				    {
 					spies.add(i);
-					valid_paths.add(proposed_path);
+				    }
+				if(validate.is_valid_path(proposed_path) == -1) {
+				    valid_paths.add(proposed_path);
 				}
+			
 			}
 		}
 		if(valid_paths.size() > 0)
@@ -556,6 +584,23 @@ public class Player implements spy.sim.Player
 	}
 	vote_for.add(p);
 		 */
+
+		if(voting_rounds > 1){
+		    int minLen = 10000;
+		    int bestPath = this.id;
+		    for (Integer i : sizes.keySet()){
+			if (sizes.get(i) < minLen){
+			    minLen = sizes.get(i);
+			    bestPath = i;
+			}
+		    }
+
+		    vote_for.add(bestPath);
+		} else {
+		    for(Integer i : sizes.keySet()){
+			vote_for.add(i);
+		    }
+		}
 		return vote_for;
 	}
 
@@ -574,7 +619,7 @@ public class Player implements spy.sim.Player
 			Integer num_votes = results.get(i);
 			if(num_votes != null)
 			{
-				//System.out.println("G"+i+ " got " + num_votes + " votes");
+				System.out.println("G"+i+ " got " + num_votes + " votes");
 			}
 		}
 	}
@@ -633,105 +678,116 @@ public class Player implements spy.sim.Player
 			}
 		}
 
-		/*    if(target_loc == null && possible_target != null){
+		if(target_loc == null && possible_target != null){
 
-			    MazeSolver exploreTarget = new MazeSolver(current, possible_target, records);
-			    exploreTarget.bushwhack();
-			    possible_target = null;
-			    if(exploreTarget.path != null){
-				go_to = exploreTarget.path;
-
-				//System.out.println("exploring target");
-				return new Point(0,0);
-			    }
-
+		    MazeSolver exploreTarget = new MazeSolver(current, possible_target, truth_table);
+		    
+		    exploreTarget.bushwhack();
+		    possible_target = null;
+		    if(exploreTarget.path != null){
+			go_to = exploreTarget.path;
+			
+			//System.out.println("exploring target");
+			return new Point(0,0);
 		    }
-
-		    if(package_loc == null && possible_package != null){
-			    MazeSolver exploreTarget = new MazeSolver(current, possible_package, records);
-			    exploreTarget.bushwhack();
-			    possible_package = null;
-			    if(exploreTarget.path != null){
-				go_to = exploreTarget.path;
-
-				//System.out.println("exploring target");
-				return new Point(0,0);
-			    }
-
-			    } */
+		    
+		}
+		
+		if(package_loc == null && possible_package != null){
+		    MazeSolver exploreTarget = new MazeSolver(current, possible_package, truth_table);
+		    exploreTarget.bushwhack();
+		    possible_package = null;
+		    if(exploreTarget.path != null){
+			go_to = exploreTarget.path;
+			
+			//System.out.println("exploring target");
+			return new Point(0,0);
+		    }
+		    
+		} 
 
 
 		//System.out.println("Target FOUND");
-		int possible_y = current.y;
+
+		if( !movingLeft ){
+		    int possible_y = current.y;
+		    int possible_x = current.x;
+		    while (possible_y+1 < SIZE && explore_map.get(current.x).get(possible_y).getC() == 0) 
+			{
+			    possible_y++;
+			    if (explore_map.get(current.x).get(possible_y) == null)
+				{
+				    return new Point(0, 1);
+				}
+			}
+		    while (possible_x+1 < SIZE && explore_map.get(possible_x).get(current.y).getC() == 0)
+			{
+			    possible_x++;
+			    if (explore_map.get(possible_x).get(current.y) == null)
+				{
+				    return new Point(1, 0);
+				}
+			}
+		    possible_y = current.y;
+		    possible_x = current.x;
+		    while (possible_y-1 >= 0 && explore_map.get(current.x).get(possible_y).getC() == 0)
+			{
+			    possible_y--;
+			    if (explore_map.get(current.x).get(possible_y) == null)
+				{
+				    return new Point(0, -1);
+				}
+			}
+		}
 		int possible_x = current.x;
-		while (possible_y+1 < SIZE && truth_table.get(current.x).get(possible_y).getC() == 0) 
-		{
-			possible_y++;
-			if (truth_table.get(current.x).get(possible_y) == null)
-			{
-				return new Point(0, 1);
-			}
-		}
-		while (possible_x+1 < SIZE && truth_table.get(possible_x).get(current.y).getC() == 0)
-		{
-			possible_x++;
-			if (truth_table.get(possible_x).get(current.y) == null)
-			{
-				return new Point(1, 0);
-			}
-		}
-		possible_y = current.y;
-		possible_x = current.x;
-		while (possible_y-1 >= 0 && truth_table.get(current.x).get(possible_y).getC() == 0)
-		{
-			possible_y--;
-			if (truth_table.get(current.x).get(possible_y) == null)
-			{
-				return new Point(0, -1);
-			}
-		}
-		possible_y = current.y;
-		possible_x = current.x;
-		while (possible_x-1 >= 0 && truth_table.get(possible_x).get(current.y).getC() == 0)
+		while (possible_x-1 >= 0 && explore_map.get(possible_x).get(current.y).getC() == 0)
+		    {
+			possible_x--;
+			if (explore_map.get(possible_x).get(current.y) == null)
+			    {
+				movingLeft = true;
+				return new Point(-1, 0);
+			    }
+		    }
+		movingLeft = false;
+		
+		    /*		int count = 0;
+		List<Point> new_path = new ArrayList<Point>();
+		while (possible_x-1 >= 0 && explore_map.get(possible_x).get(current.y).getC() == 0)
 		{
 			possible_x--;
-			if (truth_table.get(possible_x).get(current.y) == null)
+			count ++;
+			new_path.add(new Point(possible_x, current.y));
+			if (explore_map.get(possible_x).get(current.y) == null)
 			{
-				List<Point> new_path = new ArrayList<Point>();
-				if(truth_table.get(current.x-1).get(current.y).getC() == 0)
-				{				    
-					if(truth_table.get(current.x-2).get(current.y).getC() == 0)
-					{
-						new_path.add(new Point(current.x-2,current.y));
-						if(truth_table.get(current.x-3).get(current.y).getC() == 0)
-						{
-							new_path.add(new Point(current.x-3,current.y));
-							if(truth_table.get(current.x-4).get(current.y) == null 
-									|| truth_table.get(current.x-4).get(current.y).getC() == 0)
-							{
-								new_path.add(new Point(current.x-4,current.y));
-							}
-						}
-					}
-				}
-
-				if (new_path.size() > 0)
-				{
-					go_to = new_path;
-					//System.out.print("stepping left");
-				}
-
-				return new Point(-1, 0);
+			    while ( count < 7 && possible_x-1 >= 0 && (explore_map.get(possible_x-1).get(current.y) == null || explore_map.get(possible_x-1).get(current.y).getC() == 0)){
+				possible_x--;
+				count ++;
+				new_path.add(new Point(possible_x, current.y));
+				
+			    }
+			    go_to = new ArrayList<Point>();
+			    int count2 = 0;
+			    while(count2 < 7 && count2 < new_path.size()){
+			    
+				go_to.add(new_path.get(count2));
+				count2 ++;
+				    
+			    }
+			    return new Point(0,0);
 			}
 		}
-		MazeSolver sweeper = new MazeSolver(current, current, truth_table);
-		List<Point> spath = sweeper.sweep(current, truth_table);
+		    */
+		
+		MazeSolver sweeper = new MazeSolver(current, current, explore_map);
+		List<Point> spath = sweeper.sweep(current, explore_map);
 		if (spath != null) 
 		{
+		    spath.remove(spath.size()-1);
 			go_to = spath;
 			return new Point(0, 0);
 		}
-		List<Point> epath = sweeper.explore(current, truth_table);
+		List<Point> epath = sweeper.explore(current, explore_map);
 		if (epath != null) 
 		{
 			//System.out.println("epath\n\n\n\n\n\n\n");

@@ -56,12 +56,12 @@ public class valid
 	}
 	
 	// Vaibhav patch: Is each step valid?
-	public boolean is_valid_path(List<Point> path)
+	public int is_valid_path(List<Point> path)
 	{
 		// Obviously empty path is bad!
 		if(path.isEmpty())
 		{
-			return false;
+			return -1;
 		}
 
 		for (int i = 0; i < path.size(); i++)
@@ -73,7 +73,7 @@ public class valid
 				// TODO: Continue, check regardless?
 				// Or check the step!
 				//return false;
-				return false;
+				return -1;
 			}
 			
 			if (i == 0)
@@ -81,13 +81,13 @@ public class valid
 				// Not Location of Package!
 				if(verify.getPT() != 1)
 				{
-					return false;
+					return 0;
 				}
 				// Check if next step is valid!
 				Point test_next = path.get(i + 1);
 				if (!valid_next_step(test, test_next))
 				{
-					return false;
+					return 0;
 				}
 				
 			}
@@ -96,7 +96,7 @@ public class valid
 				// Not Location of Target!
 				if(verify.getPT() != 2)
 				{
-					return false;
+					return 0;
 				}
 			}
 			else
@@ -105,18 +105,18 @@ public class valid
 				Point test_next = path.get(i + 1);
 				if (!valid_next_step(test, test_next))
 				{
-					return false;
+					return 0;
 				}
 				// Are any of these tiles muddy?
 				// Conidtion 1 -> Muddy and 2 -> Water!
 				if(verify.getC() != 0)
 				{
-					return false;
+					return 0;
 				}	
 			}
 		}
 		// Well the path looks good according to the truth table
-		return true;
+		return 1;
 	}
 	
 	private boolean valid_next_step(Point from, Point to)
