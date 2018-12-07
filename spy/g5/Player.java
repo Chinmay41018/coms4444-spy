@@ -366,7 +366,6 @@ public class Player implements spy.sim.Player
 				if(is_lying(r) == 1){
 				    if (r.getObservations().size() == 1) //dont want to accuse people as spies for passing on info people told them
 					{
-					    System.out.println("recieved bad records");
 					    spies.add(id);
 					    return;
 					}
@@ -531,8 +530,9 @@ public class Player implements spy.sim.Player
 		if(isSpy && solution.path != null)
 		{
 			// Try this...
-		    solution.path.add(solution.path.get(solution.path.size() - 2));
-			return solution.path;
+		    // solution.path.add(solution.path.get(solution.path.size() - 2));
+		    solution.path.remove(solution.path.size() - 2);
+		    return solution.path;
 		}
 		else
 		{
@@ -565,13 +565,16 @@ public class Player implements spy.sim.Player
 			{
 				// Analyze the Path. For now, just compare with our truth table. 
 				// If a lie is found, Do NOT vote. Otherwise, vote for it!
-				if(validate.is_valid_path(proposed_path) != 0)
+				if(validate.is_valid_path(proposed_path) != 0 && !isSpy)
 				{
 				    sizes.put(i, proposed_path.size());
 				}
 
 				else
 				    {
+					if(validate.is_valid_path(proposed_path) == 0 && isSpy){
+					    sizes.put(i, proposed_path.size());
+					}
 					spies.add(i);
 				    }
 				if(validate.is_valid_path(proposed_path) == -1) {
@@ -635,7 +638,7 @@ public class Player implements spy.sim.Player
 			Integer num_votes = results.get(i);
 			if(num_votes != null)
 			{
-				System.out.println("G"+i+ " got " + num_votes + " votes");
+			    //				System.out.println("G"+i+ " got " + num_votes + " votes");
 			}
 		}
 	}

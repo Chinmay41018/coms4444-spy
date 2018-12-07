@@ -58,6 +58,7 @@ public class valid
 	// Vaibhav patch: Is each step valid?
 	public int is_valid_path(List<Point> path)
 	{
+	    boolean check_flag = false;
 		// Obviously empty path is bad!
 		if(path.isEmpty())
 		{
@@ -73,7 +74,9 @@ public class valid
 				// TODO: Continue, check regardless?
 				// Or check the step!
 				//return false;
-				return -1;
+				//return -1;
+			    check_flag = true;
+			    continue;
 			}
 			
 			if (i == 0)
@@ -116,6 +119,9 @@ public class valid
 			}
 		}
 		// Well the path looks good according to the truth table
+		if (check_flag){
+		    return -1;
+		}
 		return 1;
 	}
 	
