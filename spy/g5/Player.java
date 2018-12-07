@@ -135,17 +135,20 @@ public class Player implements spy.sim.Player
     public boolean checkLoc(List<Integer> players, Point soilder, Point us)
     {
     	Integer player = players.get(0);
+    	for(Integer player_test:players){
+    		if(player_test!=this.id){
+    			player = player_test;
+    			break;
+    		}
+    	}
+
 		if(player>this.id)
 		{
-			return false;
-		}
-		else if (player==this.id)
-		{
-			return checkLoc(soilder,us);
+			return true;
 		}
 		else
 		{
-			return true;
+			return false;
 		}
 	}
 
@@ -174,6 +177,7 @@ public class Player implements spy.sim.Player
 
     public Point playerDetectedMove()
     {
+    	playerDetect = false;
 		Point ret = new Point(0,0);
         if(stay)
         {
@@ -182,6 +186,9 @@ public class Player implements spy.sim.Player
         }
         else if (moveToPlayer)
         {
+            // System.out.println("Move Here");
+            // System.out.println(movePosition.x);
+            // System.out.println(movePosition.y);
             ret = movePosition;
         }
         return ret;
@@ -203,19 +210,24 @@ public class Player implements spy.sim.Player
             int flag = 1;
             CellStatus status = entry.getValue();
             List<Integer> players = status.getPresentSoldiers();
-            for(Integer player:players)
-            {
-                if(justMet.contains(player))
-                {
-                    flag = 1;
-                }
-                else
-                {
-                    flag = 0;
-                    break;
-                }
-            }
+            if((Math.abs(p.x-current.x)>1)||(Math.abs(p.y-current.y)>1)){}
+            else{
+                for(Integer player:players)
+	            {
+	                if(justMet.contains(player)||player==this.id)
+	                {
+	                    flag *= 1;
+	                }
+	                else
+	                {
+		            	// System.out.println(player);
+	                    flag *= 0;
+	                    justMet.add(player);
+	                    meetTime.add(25);
 
+	                }
+	            }
+	        }
             if((players != null)&&(flag==0))
             {
                 if(((p.x==current.x)&&(p.y==current.y))||(Math.abs(p.x-current.x)>1)||(Math.abs(p.y-current.y)>1))
@@ -238,6 +250,9 @@ public class Player implements spy.sim.Player
                         moveToPlayer = true;
                         movePosition.x = p.x - current.x;
                         movePosition.y = p.y - current.y;
+                      //   System.out.println("Where to go");
+                     	// System.out.println(movePosition.x);
+                     	// System.out.println(movePosition.y);                           
                     }
                 }
             }
@@ -299,8 +314,9 @@ public class Player implements spy.sim.Player
 	
 	public List<Record> sendRecords(int id)
 	{
-		justMet.add(id);
-		meetTime.add(25);
+		// justMet.add(id);
+		// meetTime.add(25);
+		//System.out.println("Communicate");
 		ArrayList<Record> toSend = new ArrayList<Record>();
 		if(isSpy)
 		{
@@ -631,6 +647,8 @@ public class Player implements spy.sim.Player
 		stuck_for--;
 		for (int i=justMet.size()-1;i>=0;i--)
 		{
+			// System.out.println("Meet Time");
+			// System.out.println(meetTime.get(i));
 			int a = meetTime.get(i);
 			a = a - 1 ;
 			if(a==0)
