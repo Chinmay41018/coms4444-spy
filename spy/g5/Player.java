@@ -304,7 +304,7 @@ public class Player implements spy.sim.Player
 		ArrayList<Record> toSend = new ArrayList<Record>();
 		if(isSpy)
 		{
-			// We should lie mwahahaha
+			// W
 		}
 		else
 		{
@@ -504,11 +504,11 @@ public class Player implements spy.sim.Player
 		//	System.out.print("proposing path: ");
 		if(solution.path != null)
 		{
-			//  for(Point p : solution.path){
-			//	System.out.printf("(%d,%d), ", p.x, p.y);
+			for(Point p : solution.path){
+				System.out.printf("(%d,%d), ", p.x, p.y);
 
-			//		    }
-			// System.out.println();
+					    }
+			 System.out.println();
 		}
 
 		// give wrong direction somehow...
